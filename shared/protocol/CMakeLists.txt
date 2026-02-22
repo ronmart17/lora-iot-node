@@ -3,5 +3,4 @@ idf_component_register(
         "packet.c"
         "crc16.c"
     INCLUDE_DIRS "."
-    NAME protocol
 )

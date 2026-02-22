@@ -2,7 +2,7 @@
 #define EVENT_SERVICE_H
 
 #include <stdint.h>
-#include "protocol/packet.h"
+#include "packet.h"
 
 /* Event queue max size */
 #define EVENT_QUEUE_SIZE    10

@@ -2,9 +2,10 @@
 #define POWER_DRIVER_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
-/* Battery ADC pin */
-#define BATTERY_ADC_PIN     35
+/* Battery ADC pin (Heltec V3) */
+#define BATTERY_ADC_PIN     1
 
 /* Battery voltage thresholds */
 #define BATTERY_FULL_MV     4200

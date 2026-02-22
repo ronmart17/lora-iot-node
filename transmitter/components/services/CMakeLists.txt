@@ -5,5 +5,5 @@ idf_component_register(
         "power_manager.c"
         "display_service.c"
     INCLUDE_DIRS "."
-    REQUIRES drivers protocol oled esp_timer
+    REQUIRES drivers protocol oled_driver esp_timer
 )

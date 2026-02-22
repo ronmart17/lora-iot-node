@@ -1,6 +1,6 @@
 #include "event_service.h"
-#include "protocol/packet.h"
-#include "drivers/power_driver.h"
+#include "packet.h"
+#include "power_driver.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"

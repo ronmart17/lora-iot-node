@@ -4,5 +4,5 @@ idf_component_register(
         "pir_driver.c"
         "power_driver.c"
     INCLUDE_DIRS "."
-    REQUIRES driver esp_timer esp_wifi bt
+    REQUIRES driver esp_adc esp_timer esp_wifi esp_hw_support
 )

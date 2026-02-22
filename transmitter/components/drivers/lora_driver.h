@@ -4,13 +4,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* SPI Pin definitions */
-#define LORA_PIN_SCK     5
-#define LORA_PIN_MOSI    27
-#define LORA_PIN_MISO    19
-#define LORA_PIN_CS      18
-#define LORA_PIN_RST     14
-#define LORA_PIN_IRQ     26
+/* Heltec WiFi LoRa 32 V3 - SX1262 SPI pins */
+#define LORA_PIN_SCK     9
+#define LORA_PIN_MOSI    10
+#define LORA_PIN_MISO    11
+#define LORA_PIN_CS      8
+#define LORA_PIN_RST     12
+#define LORA_PIN_IRQ     14    /* DIO1 */
+#define LORA_PIN_BUSY    13
 
 /* LoRa radio settings */
 #define LORA_FREQUENCY       915E6   /* 915 MHz */

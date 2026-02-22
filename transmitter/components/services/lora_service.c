@@ -1,6 +1,6 @@
 #include "lora_service.h"
-#include "drivers/lora_driver.h"
-#include "protocol/packet.h"
+#include "lora_driver.h"
+#include "packet.h"
 #include "esp_log.h"
 
 static const char *TAG = "LORA_SERVICE";

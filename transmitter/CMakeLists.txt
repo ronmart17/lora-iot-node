@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
+
 set(EXTRA_COMPONENT_DIRS
-    "../shared/protocol"
-    "../shared/drivers"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../shared/protocol"
 )
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(transmitter)

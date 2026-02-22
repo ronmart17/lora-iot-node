@@ -1,7 +1,5 @@
 idf_component_register(
-    SRCS
-        "oled_driver.c"
+    SRCS "oled_driver.c"
     INCLUDE_DIRS "."
-    NAME oled_driver
     REQUIRES driver esp_timer
 )

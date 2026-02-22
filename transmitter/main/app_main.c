@@ -4,14 +4,15 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 
-#include "drivers/pir_driver.h"
-#include "drivers/lora_driver.h"
-#include "drivers/power_driver.h"
-#include "services/event_service.h"
-#include "services/lora_service.h"
-#include "services/power_manager.h"
-#include "services/display_service.h"
-#include "protocol/packet.h"
+#include "pir_driver.h"
+#include "lora_driver.h"
+#include "power_driver.h"
+#include "event_service.h"
+#include "lora_service.h"
+#include "power_manager.h"
+#include "display_service.h"
+#include "oled_driver.h"
+#include "packet.h"
 
 static const char *TAG = "APP_TX";
 
@@ -129,7 +130,7 @@ void app_main(void)
     /* Create FreeRTOS tasks */
     xTaskCreate(event_task,   "event_task",   4096, NULL, 5, NULL);
     xTaskCreate(lora_tx_task, "lora_tx_task", 4096, NULL, 4, NULL);
-    xTaskCreate(power_task,   "power_task",   2048, NULL, 3, NULL);
+    xTaskCreate(power_task,   "power_task",   4096, NULL, 3, NULL);
 
     ESP_LOGI(TAG, "All tasks started - transmitter running");
 }

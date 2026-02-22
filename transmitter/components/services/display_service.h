@@ -2,7 +2,7 @@
 #define DISPLAY_SERVICE_H
 
 #include <stdint.h>
-#include "protocol/packet.h"
+#include "packet.h"
 
 /**
  * @brief Initialize display service

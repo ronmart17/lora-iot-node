@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "protocol/packet.h"
+#include "packet.h"
 
 /**
  * @brief Initialize LoRa service (wraps lora_driver_init)
