@@ -1,96 +1,119 @@
+/**
+ * LoRa IoT Node - Transmitter
+ *
+ * FreeRTOS tasks:
+ *   event_task  (P5) - Reads PIR events from queue, builds lora_packet_t
+ *   lora_tx_task(P4) - Serializes and transmits packets over LoRa
+ *   power_task  (P3) - Monitors battery and manages sleep states
+ */
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
-#include "pir_driver.h"
 #include "lora_driver.h"
+#include "oled_driver.h"
+#include "pir_driver.h"
 #include "power_driver.h"
+#include "packet.h"
 #include "event_service.h"
 #include "lora_service.h"
-#include "power_manager.h"
 #include "display_service.h"
-#include "oled_driver.h"
-#include "packet.h"
+#include "power_manager.h"
 
-static const char *TAG = "APP_TX";
+static const char *TAG = "TX_MAIN";
 
-/* This node unique ID */
-#define NODE_ID     0x01
+#define NODE_ID  0x01
 
-/* TX queue - holds packets ready to transmit */
-static QueueHandle_t s_queue_tx = NULL;
+/* Inter-task queue for ready packets */
+static QueueHandle_t s_tx_queue = NULL;
+#define TX_QUEUE_SIZE  5
 
 /* Packet counter */
 static uint32_t s_tx_count = 0;
 
-/* ─── PIR Callback (called from ISR) ─────────────────────────── */
+/* ─── PIR Callback (ISR context) ─────────────────────────────── */
 
-static void pir_motion_callback(void)
+static void pir_motion_cb(void)
 {
     event_service_push(EVENT_PIR_MOTION);
-    power_manager_notify_event();
 }
 
-/* ─── Task: Build packets from events ────────────────────────── */
+/* ─── Event Task (Priority 5) ────────────────────────────────── */
 
 static void event_task(void *arg)
 {
-    lora_packet_t pkt;
-
-    ESP_LOGI(TAG, "event_task started");
+    ESP_LOGI(TAG, "Event task started");
 
     while (1) {
+        lora_packet_t pkt;
+
         if (event_service_build_packet(&pkt, NODE_ID)) {
-            if (xQueueSend(s_queue_tx, &pkt, pdMS_TO_TICKS(100)) != pdTRUE) {
-                ESP_LOGW(TAG, "TX queue full, dropping packet");
+            /* Notify power manager that activity occurred */
+            power_manager_notify_event();
+
+            /* Send packet to TX queue */
+            if (xQueueSend(s_tx_queue, &pkt, pdMS_TO_TICKS(500)) != pdTRUE) {
+                ESP_LOGW(TAG, "TX queue full - dropping packet");
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
-/* ─── Task: Transmit packets over LoRa ───────────────────────── */
+/* ─── LoRa TX Task (Priority 4) ──────────────────────────────── */
 
 static void lora_tx_task(void *arg)
 {
-    lora_packet_t pkt;
-
-    ESP_LOGI(TAG, "lora_tx_task started");
+    ESP_LOGI(TAG, "LoRa TX task started");
 
     while (1) {
-        if (xQueueReceive(s_queue_tx, &pkt, pdMS_TO_TICKS(500)) == pdTRUE) {
+        lora_packet_t pkt;
 
-            s_tx_count++;
+        /* Block until a packet arrives */
+        if (xQueueReceive(s_tx_queue, &pkt, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            bool ok = lora_service_send_packet(&pkt);
 
-            /* Update OLED with TX info */
-            display_service_show_tx(&pkt, s_tx_count);
-
-            /* Transmit over LoRa */
-            lora_service_send_packet(&pkt);
-
-            vTaskDelay(pdMS_TO_TICKS(100));
-        } else {
-            /* No packet - show idle screen */
-            uint8_t battery = power_driver_read_percent();
-            display_service_show_idle(battery);
+            if (ok) {
+                s_tx_count++;
+                display_service_show_tx(&pkt, s_tx_count);
+                ESP_LOGI(TAG, "TX #%lu OK", s_tx_count);
+            } else {
+                ESP_LOGE(TAG, "TX FAILED");
+            }
         }
     }
 }
 
-/* ─── Task: Power management ─────────────────────────────────── */
+/* ─── Power Task (Priority 3) ────────────────────────────────── */
 
 static void power_task(void *arg)
 {
-    ESP_LOGI(TAG, "power_task started");
+    ESP_LOGI(TAG, "Power task started");
 
     while (1) {
-        if (power_driver_is_low()) {
-            display_service_show_sleep();
-        }
         power_manager_tick();
-        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        /* Periodically send heartbeat with battery level */
+        static uint32_t heartbeat_counter = 0;
+        heartbeat_counter++;
+
+        /* Heartbeat every ~60 seconds (600 * 100ms) */
+        if (heartbeat_counter >= 600) {
+            heartbeat_counter = 0;
+            event_service_push(EVENT_HEARTBEAT);
+
+            /* Check for low battery event */
+            if (power_driver_is_low()) {
+                event_service_push(EVENT_LOW_BATTERY);
+                ESP_LOGW(TAG, "Low battery detected");
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -98,39 +121,40 @@ static void power_task(void *arg)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "=== LoRa IoT Node - Transmitter v1.0 ===");
+    ESP_LOGI(TAG, "=== LoRa IoT Node - Transmitter ===");
     ESP_LOGI(TAG, "Node ID: 0x%02X", NODE_ID);
 
-    /* Initialize display first so we can show boot screen */
+    /* Initialize display */
     display_service_init();
     display_service_show_boot(NODE_ID);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-
-    /* Initialize all services */
-    event_service_init();
-    power_manager_init();
+    vTaskDelay(pdMS_TO_TICKS(1500));
 
     /* Initialize LoRa */
     if (!lora_service_init()) {
-        ESP_LOGE(TAG, "Failed to initialize LoRa - halting");
-        oled_driver_print(0, 40, "LoRa FAILED!", OLED_FONT_SMALL);
-        oled_driver_update();
+        ESP_LOGE(TAG, "LoRa init FAILED - halting");
         return;
     }
 
-    /* Initialize PIR sensor */
-    pir_driver_init(pir_motion_callback);
+    /* Initialize event service */
+    event_service_init();
 
-    /* Create TX queue */
-    s_queue_tx = xQueueCreate(5, sizeof(lora_packet_t));
+    /* Initialize power manager (includes ADC + battery) */
+    power_manager_init();
+
+    /* Initialize PIR sensor */
+    pir_driver_init(pir_motion_cb);
+
+    /* Create inter-task TX queue */
+    s_tx_queue = xQueueCreate(TX_QUEUE_SIZE, sizeof(lora_packet_t));
 
     /* Show idle screen */
-    display_service_show_idle(power_driver_read_percent());
+    uint8_t batt = power_driver_read_percent();
+    display_service_show_idle(batt);
 
-    /* Create FreeRTOS tasks */
+    ESP_LOGI(TAG, "All systems ready - waiting for PIR events");
+
+    /* Launch FreeRTOS tasks */
     xTaskCreate(event_task,   "event_task",   4096, NULL, 5, NULL);
     xTaskCreate(lora_tx_task, "lora_tx_task", 4096, NULL, 4, NULL);
     xTaskCreate(power_task,   "power_task",   4096, NULL, 3, NULL);
-
-    ESP_LOGI(TAG, "All tasks started - transmitter running");
 }

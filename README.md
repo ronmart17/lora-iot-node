@@ -39,7 +39,7 @@ Built entirely from scratch without external LoRa libraries — all SPI communic
 | LoRa RST | 12 | GPIO |
 | LoRa IRQ (DIO1) | 14 | GPIO |
 | LoRa BUSY | 13 | GPIO |
-| PIR Sensor | 2 | GPIO INPUT |
+| PIR Sensor | 7 | GPIO INPUT |
 | Battery ADC | 1 | ADC |
 | ADC Control | 37 | GPIO |
 | Vext | 36 | GPIO |
