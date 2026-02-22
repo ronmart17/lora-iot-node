@@ -5,5 +5,5 @@ idf_component_register(
         drivers
         services
         protocol
-        oled
+        oled_driver
 )

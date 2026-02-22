@@ -1,5 +1,5 @@
 #include "display_service.h"
-#include "drivers/oled_driver.h"
+#include "oled_driver.h"
 #include "esp_log.h"
 #include <stdio.h>
 

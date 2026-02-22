@@ -4,10 +4,11 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 
-#include "drivers/lora_driver.h"
-#include "services/lora_service.h"
-#include "services/display_service.h"
-#include "protocol/packet.h"
+#include "lora_driver.h"
+#include "lora_service.h"
+#include "display_service.h"
+#include "packet.h"
+#include "oled_driver.h"
 
 static const char *TAG = "APP_RX";
 

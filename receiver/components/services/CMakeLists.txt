@@ -3,5 +3,5 @@ idf_component_register(
         "lora_service.c"
         "display_service.c"
     INCLUDE_DIRS "."
-    REQUIRES drivers protocol oled
+    REQUIRES drivers protocol oled_driver
 )
