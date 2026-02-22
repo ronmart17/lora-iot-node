@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* PIR sensor GPIO pin (Heltec V3 - J2 header, GPIO7) */
+/* PIR sensor GPIO pin (Heltec V3 - J3 header pin 18) */
 #define PIR_GPIO_PIN     7
 
 /* Minimum time between events to avoid false triggers (ms) */
