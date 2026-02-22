@@ -20,75 +20,58 @@ Built entirely from scratch without external LoRa libraries — all SPI communic
 
 ## System Diagram
 
-```
- TRANSMITTER NODE                              RECEIVER NODE
-+---------------------+                      +---------------------+
-|  Heltec WiFi LoRa   |                      |  Heltec WiFi LoRa   |
-|     32 V3 (TX)      |                      |     32 V3 (RX)      |
-|                     |    LoRa 915 MHz      |                     |
-| +---------------+   |    SF7 / 125kHz      |   +---------------+ |
-| |   ESP32-S3    |   |    ~10 km range      |   |   ESP32-S3    | |
-| |               |   |                      |   |               | |
-| |  FreeRTOS     |   |   +-------------+   |   |  FreeRTOS     | |
-| |  +----------+ |   |   | 9-byte pkt  |   |   |  +----------+ | |
-| |  |event   P5|-|---+-->| CRC16-CCITT |-->+---|--|rx      P5| | |
-| |  |tx      P4| |   |   +-------------+   |   |  |disp    P4| | |
-| |  |power   P3| |   |                      |   |  +----------+ | |
-| |  +----------+ |   |                      |   |               | |
-| |          SPI   |   |                      |   |  SPI          | |
-| +------+--------+   |                      |   +---+-----------+ |
-|        |             |                      |       |             |
-| +------+--------+   |                      | +-----+---------+   |
-| |    SX1262     |   |                      | |    SX1262    |   |
-| |  Radio 20dBm  |   |                      | |  Radio       |   |
-| +---------------+   |                      | +--------------+   |
-|                     |                      |                     |
-| +---------------+   |                      | +---------------+   |
-| |  OLED 0.96"   |   |                      | |  OLED 0.96"   |   |
-| |  SSD1306 I2C  |   |                      | |  SSD1306 I2C  |   |
-| +---------------+   |                      | +---------------+   |
-+--------+------------+                      +---------------------+
-         |
-  +------+---+  +----------+
-  | HC-SR501 |  | LiPo 3.7V|
-  |   PIR    |  |  Battery  |
-  |  GPIO 7  |  |  ADC CH0  |
-  +----------+  +-----------+
+```mermaid
+graph LR
+    subgraph TX["TRANSMITTER NODE - Heltec V3"]
+        PIR["HC-SR501 PIR\nGPIO 7"] --> ESP_TX["ESP32-S3\nFreeRTOS"]
+        BAT["LiPo 3.7V\nADC CH0"] --> ESP_TX
+        ESP_TX --> OLED_TX["OLED SSD1306\nI2C"]
+        ESP_TX -->|SPI| SX_TX["SX1262\n20 dBm"]
+    end
+
+    SX_TX -.->|"LoRa 915 MHz\nSF7 / 125kHz\n9-byte pkt + CRC16"| SX_RX
+
+    subgraph RX["RECEIVER NODE - Heltec V3"]
+        SX_RX["SX1262"] -->|SPI| ESP_RX["ESP32-S3\nFreeRTOS"]
+        ESP_RX --> OLED_RX["OLED SSD1306\nI2C"]
+    end
 ```
 
 ### Software Layer Diagram
 
-```
-+-----------------------------------------------------------+
-|                       app_main.c                          |
-|             xTaskCreate() x3 (TX) / x2 (RX)              |
-+-----------------------------------------------------------+
-|  SERVICES                                                 |
-|  +----------+  +----------+  +---------+  +------------+  |
-|  |  event   |  |   lora   |  | display |  |   power    |  |
-|  | service  |  | service  |  | service |  |  manager   |  |
-|  |          |  |          |  |         |  |            |  |
-|  | PIR queue|  | serialize|  | OLED    |  | sleep FSM  |  |
-|  | pkt build|  | send/recv|  | screens |  | batt check |  |
-|  +----+-----+  +----+-----+  +----+----+  +-----+------+  |
-+-------|--------------|-----------|--------------|---------+
-|  DRIVERS                                                  |
-|  +----+-----+  +----+-----+  +----+----+  +-----+------+  |
-|  |   pir    |  |   lora   |  |  oled   |  |   power    |  |
-|  |  driver  |  |  driver  |  | driver  |  |   driver   |  |
-|  |          |  |          |  |         |  |            |  |
-|  | GPIO ISR |  | SPI cmds |  | I2C cmd |  | ADC+sleep  |  |
-|  +----+-----+  +----+-----+  +----+----+  +-----+------+  |
-+-------|--------------|-----------|--------------|---------+
-|  SHARED PROTOCOL                                          |
-|  +------------------+  +------------------+               |
-|  |  packet.h/.c     |  |  crc16.h/.c      |               |
-|  |  build/serialize |  |  CRC16-CCITT     |               |
-|  |  deserialize/val |  |  from scratch    |               |
-|  +------------------+  +------------------+               |
-+-----------------------------------------------------------+
-|  ESP-IDF v5.x  |  FreeRTOS  |  SPI/I2C/GPIO/ADC HAL      |
-+-----------------------------------------------------------+
+```mermaid
+graph TD
+    subgraph APP["app_main.c"]
+        MAIN["xTaskCreate x3 TX / x2 RX"]
+    end
+
+    subgraph SVC["SERVICES"]
+        EVT["event_service\nPIR queue\npkt build"]
+        LORA_S["lora_service\nserialize\nsend/recv"]
+        DISP_S["display_service\nOLED screens"]
+        PWR_M["power_manager\nsleep FSM\nbatt check"]
+    end
+
+    subgraph DRV["DRIVERS"]
+        PIR_D["pir_driver\nGPIO ISR"]
+        LORA_D["lora_driver\nSPI cmds"]
+        OLED_D["oled_driver\nI2C cmds"]
+        PWR_D["power_driver\nADC + sleep"]
+    end
+
+    subgraph PROTO["SHARED PROTOCOL"]
+        PKT["packet.h/.c\nbuild / serialize\ndeserialize / validate"]
+        CRC["crc16.h/.c\nCRC16-CCITT"]
+    end
+
+    subgraph HAL["ESP-IDF v5.x + FreeRTOS"]
+        HW["SPI / I2C / GPIO / ADC HAL"]
+    end
+
+    APP --> SVC
+    SVC --> DRV
+    SVC --> PROTO
+    DRV --> HAL
 ```
 
 ---
