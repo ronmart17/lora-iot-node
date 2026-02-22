@@ -1,8 +1,8 @@
 # LoRa IoT Node System
 
-> ESP32-based IoT system for long-range event detection and wireless transmission using LoRa protocol.
+> ESP32-S3 IoT system for long-range event detection and wireless transmission using LoRa protocol.
 
-![Platform](https://img.shields.io/badge/Platform-ESP32%20LoRa%20V3-blue)
+![Platform](https://img.shields.io/badge/Platform-ESP32--S3%20LoRa%20V3-blue)
 ![Framework](https://img.shields.io/badge/Framework-ESP--IDF-red)
 ![Protocol](https://img.shields.io/badge/Protocol-LoRa%20915MHz-orange)
 ![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-green)
@@ -12,7 +12,7 @@
 
 ## Overview
 
-This project implements a complete IoT system using two **Heltec ESP32 LoRa V3** modules communicating over LoRa at 915 MHz. A transmitter node detects motion events via a PIR sensor and sends structured packets to a receiver node, which validates data integrity and displays results on the integrated OLED screen.
+This project implements a complete IoT system using two **Heltec WiFi LoRa 32 V3** modules (ESP32-S3 + SX1262) communicating over LoRa at 915 MHz. A transmitter node detects motion events via a PIR sensor and sends structured packets to a receiver node, which validates data integrity and displays results on the integrated OLED screen.
 
 Built entirely from scratch without external LoRa libraries — all SPI communication, packet protocol, and CRC16 validation are custom implementations.
 
@@ -22,8 +22,8 @@ Built entirely from scratch without external LoRa libraries — all SPI communic
 
 | Component | Model | Notes |
 |-----------|-------|-------|
-| MCU | Heltec ESP32 LoRa V3 | Both nodes |
-| Radio | SX1276 / SX1278 | Integrated in module |
+| MCU | Heltec WiFi LoRa 32 V3 (ESP32-S3) | Both nodes |
+| Radio | SX1262 | Integrated in module |
 | Sensor | HC-SR501 PIR | Transmitter only |
 | Display | OLED 0.96" SSD1306 | Integrated in module |
 | Antenna | 915 MHz | Integrated in module |
@@ -32,13 +32,32 @@ Built entirely from scratch without external LoRa libraries — all SPI communic
 
 | Signal | GPIO | Type |
 |--------|------|------|
-| LoRa SCK | 5 | SPI |
-| LoRa MOSI | 27 | SPI |
-| LoRa MISO | 19 | SPI |
-| LoRa CS | 18 | SPI |
-| LoRa RST | 14 | GPIO |
-| LoRa IRQ | 26 | GPIO |
-| PIR Sensor | 34 | GPIO INPUT |
+| LoRa SCK | 9 | SPI |
+| LoRa MOSI | 10 | SPI |
+| LoRa MISO | 11 | SPI |
+| LoRa CS | 8 | SPI |
+| LoRa RST | 12 | GPIO |
+| LoRa IRQ (DIO1) | 14 | GPIO |
+| LoRa BUSY | 13 | GPIO |
+| PIR Sensor | 2 | GPIO INPUT |
+| Battery ADC | 1 | ADC |
+| ADC Control | 37 | GPIO |
+| Vext | 36 | GPIO |
+| OLED SDA | 17 | I2C |
+| OLED SCL | 18 | I2C |
+| OLED RST | 21 | GPIO |
+
+### Receiver GPIO Map
+
+| Signal | GPIO | Type |
+|--------|------|------|
+| LoRa SCK | 9 | SPI |
+| LoRa MOSI | 10 | SPI |
+| LoRa MISO | 11 | SPI |
+| LoRa CS | 8 | SPI |
+| LoRa RST | 12 | GPIO |
+| LoRa IRQ (DIO1) | 14 | GPIO |
+| LoRa BUSY | 13 | GPIO |
 | OLED SDA | 17 | I2C |
 | OLED SCL | 18 | I2C |
 | OLED RST | 21 | GPIO |
@@ -53,7 +72,7 @@ lora-iot-node/
 │   │   └── app_main.c         # FreeRTOS tasks: event, lora_tx, power
 │   └── components/
 │       ├── drivers/
-│       │   ├── lora_driver    # SPI communication with SX1276
+│       │   ├── lora_driver    # SPI communication with SX1262
 │       │   ├── pir_driver     # GPIO interrupt service routine
 │       │   └── power_driver   # ADC battery + light/deep sleep
 │       └── services/
@@ -66,7 +85,7 @@ lora-iot-node/
 │   │   └── app_main.c         # FreeRTOS tasks: lora_rx, display
 │   └── components/
 │       ├── drivers/
-│       │   └── lora_driver    # SPI communication with SX1276
+│       │   └── lora_driver    # SPI communication with SX1262
 │       └── services/
 │           ├── lora_service   # RX packet deserialization + CRC check
 │           └── display_service# OLED RX screen layouts
@@ -150,7 +169,7 @@ WiFi and Bluetooth are disabled at boot — not required for this application.
 
 ### Requirements
 - ESP-IDF v5.x
-- Two Heltec ESP32 LoRa V3 modules
+- Two Heltec WiFi LoRa 32 V3 modules (ESP32-S3)
 - HC-SR501 PIR sensor
 
 ### Flash Transmitter
